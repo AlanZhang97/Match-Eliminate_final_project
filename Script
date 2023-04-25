@@ -1,1 +1,139 @@
+from tkinter import *
+from tkinter.messagebox import *
+from threading import Timer
+import time
+import random
+import winsound
+import tkinter as tk
 
+
+# draw checkerboard
+def draw_checkerboard():
+    for i in range(0, 15):
+        cv.create_line(20, 20 + 40 * i, 580, 20 + 40 * i, width=2)
+    for i in range(0, 15):
+        cv.create_line(20 + 40 * i, 20, 20 + 40 * i, 580, width=2)
+    cv.pack()
+    
+    
+# output the map dictionary
+def print_map():
+    global image_map
+    for x in range(0, Width):  # 0--14
+        for y in range(0, Height):  # 0--14
+            if map[x][y] != ' ':
+                img1 = imgs[int(map[x][y])]
+                id = cv.create_image((x * 40 + 20, y * 40 + 20), image=img1)
+                image_map[x][y] = id
+    cv.pack()
+    for y in range(0, Height):  # 0--14
+        for x in range(0, Width):  # 0--14
+            print(map[x][y], end=' ')
+        print(",", y)
+        
+        
+        
+ '''
+whether two blocks can be eliminated
+'''
+
+def is_link(p1, p2):
+    if line_check(p1, p2):
+        return True
+
+    # one vertical connection
+    if one_corner_connection(p1, p2):
+        return True
+
+    # two vertical connection
+    if two_corner_connection(p1, p2):
+        return True
+    return False
+    
+    
+def is_same(p1, p2):
+    if map[p1.x][p1.y] == map[p2.x][p2.y]:
+        print("Bingo!")
+        return True
+    return False
+    
+    
+def call_back(event):
+    global Select_first, p1, p2
+    global firstSelectRectId, SecondSelectRectId
+
+    # print ("clicked at", event.x, event.y,turn)
+    x = event.x // 40
+    y = event.y // 40
+    print("clicked at", x, y)
+
+    if map[x][y] == " ":
+        showinfo(title="Tips", message="There is no blocks")
+    else:
+
+        if Select_first == False:
+            p1 = Point(x, y)
+            # selection line
+            firstSelectRectId = cv.create_rectangle(x * 40, y * 40, x * 40 + 40, y * 40 + 40, width=2, outline="blue")
+            Select_first = True
+        else:
+            p2 = Point(x, y)
+            # make sure whether the second clicked block has been clicked by the first time.If so, go back
+            if (p1.x == p2.x) and (p1.y == p2.y):
+                return
+            # draw the selection line
+            print('the second clicked block', x, y)
+            # SecondSelectRectId=cv.create_rectangle(100,20,x*40+40,y*40+40,width=2,outline="yellow")
+            SecondSelectRectId = cv.create_rectangle(x * 40, y * 40, x * 40 + 40, y * 40 + 40, width=2,
+                                                     outline="yellow")
+            print('the second clicked block', SecondSelectRectId)
+            cv.pack()
+
+            # make sure whether the connection is correct
+            if is_link(p1, p2) and is_same(p1, p2):
+                print('connection success', x, y)
+                Select_first = False
+                # draw the connection line
+                draw_connection_line(p1, p2)
+
+                # set a timer function
+                t = Timer(timer_interval, delay_run)
+                t.start()
+
+            # reselect the first block
+            else:
+                # eliminate the first selection line
+                cv.delete(firstSelectRectId)
+                cv.delete(SecondSelectRectId)
+
+                # set the reselected first block's coordinate
+                Select_first = False
+
+
+# make a time delay for 0.2 seconds
+timer_interval = 0.2
+
+
+def delay_run():
+    # eliminate blocks and connection lines
+    clear_two_blocks()
+    
+    
+    
+# eliminate blocks and connection lines
+def clear_two_blocks():
+    # delay for one second
+    time.sleep(0.1)
+    # delete the first selection line
+    cv.delete(firstSelectRectId)
+    # delete the second selection line
+    cv.delete(SecondSelectRectId)
+    # remove the value of the block
+    map[p1.x][p1.y] = " "
+    cv.delete(image_map[p1.x][p1.y])
+    map[p2.x][p2.y] = " "
+    cv.delete(image_map[p2.x][p2.y])
+    Select_first = False
+    # eliminate the connection line
+    delete_connection_line()
+    winsound.PlaySound(f'./eliminate.wav', winsound.SND_ASYNC)
