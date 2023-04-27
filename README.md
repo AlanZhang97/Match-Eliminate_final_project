@@ -1,20 +1,18 @@
 # Match-Eliminate_final_project
 
-Introduction
+Introduction:
 
 This code implements a game that involves matching blocks of the same kind gem. It features a GUI built using the tkinter library ands implements a puzzle game where the objective is to connect two given points on a board by drawing straight lines. The board is represented as a two-dimensional array, where the cells can be either empty or blocked. The solution is found by building a path between the two points that only goes through empty cells.
 
-How to run
+How to run:
 
 To run the code, you need to have Python 3 installed. You also need to have the tkinter and winsound libraries installed. You can then run the main.py file in a Python environment such as IDLE or Visual Studio Code.
 
-How to play
+How to play:
 
 The game consists of a grid of blocks of different colors. The objective is to match blocks of the same color by selecting two adjacent blocks with the mouse. If the blocks can be matched by drawing a line that connects them with no more than two turns, they will be eliminated from the grid, and the player will score points. The game ends when there are no more blocks that can be matched. To select a block, click on it with the left mouse button. To deselect a block, click on it again. To attempt to match two selected blocks, click on the second block. If the match is valid, the blocks will be eliminated, and the player will score points. If the match is not valid, the blocks will be deselected, and the player can try again.
 
-Code structure
-
-The code is structured in several functions and classes:
+Code structure:
 
 Point: a class that represents a point in 2D space, with x and y attributes.
 draw_checkerboard: a function that draws a checkerboard pattern on the canvas using cv.create_line.
