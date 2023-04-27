@@ -1,0 +1,535 @@
+from tkinter import *
+from tkinter.messagebox import *
+from threading import Timer
+import time
+import random
+import winsound
+import tkinter as tk
+
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+# draw checkerboard
+def draw_checkerboard():
+    global cv
+    for i in range(0, 15):
+        cv.create_line(20, 20 + 40 * i, 580, 20 + 40 * i, width=2)
+    for i in range(0, 15):
+        cv.create_line(20 + 40 * i, 20, 20 + 40 * i, 580, width=2)
+    cv.pack()
+
+
+# output the map dictionary
+def print_map():
+    global image_map, map, Width, Height, images, cv
+    for x in range(0, Width):  # 0--14
+        for y in range(0, Height):  # 0--14
+            if map[x][y] != ' ':
+                img1 = images[int(map[x][y])]
+                id = cv.create_image((x * 40 + 20, y * 40 + 20), image=img1)
+                image_map[x][y] = id
+    cv.pack()
+
+
+'''
+whether two blocks can be eliminated
+'''
+
+
+def is_link(p1, p2):
+    if line_check(p1, p2):
+        return True
+
+    # one vertical connection
+    if one_corner_connection(p1, p2):
+        return True
+
+    # two vertical connection
+    if two_corner_connection(p1, p2):
+        return True
+    return False
+
+
+# ---------------------------
+def is_same(p1, p2):
+    global map
+    if map[p1.x][p1.y] == map[p2.x][p2.y]:
+        print("Bingo!")
+        return True
+    return False
+
+
+first_selected = False
+p1 = None
+p2 = None
+id_first_select_rect = False
+id_second_select_rect = False
+map = None
+cv = None
+
+
+def call_back(event):
+    global first_selected, p1, p2
+    global id_first_select_rect, id_second_select_rect
+    global map, cv
+
+    x = event.x // 40
+    y = event.y // 40
+
+
+    if map[x][y] == " ":
+        showinfo(title="Tips", message="There is no blocks")
+    else:
+
+        if not first_selected:
+            p1 = Point(x, y)
+            # selection line
+            id_first_select_rect = cv.create_rectangle(x * 40, y * 40, x * 40 + 40, y * 40 + 40, width=2, outline="blue")
+            first_selected = True
+        else:
+            p2 = Point(x, y)
+            # make sure whether the second clicked block has been clicked by the first time.If so, go back
+            if (p1.x == p2.x) and (p1.y == p2.y):
+                return
+            # draw the selection line
+
+            # id_second_select_rect=cv.create_rectangle(100,20,x*40+40,y*40+40,width=2,outline="yellow")
+            id_second_select_rect = cv.create_rectangle(x * 40, y * 40, x * 40 + 40, y * 40 + 40, width=2,
+                                                     outline="yellow")
+
+            cv.unbind("<Button-1>")
+            cv.pack()
+
+            # make sure whether the connection is correct
+            if is_link(p1, p2) and is_same(p1, p2):
+
+                first_selected = False
+                # draw the connection line
+                draw_connection_line(p1, p2)
+
+                # set a timer function
+                t = Timer(timer_interval, delay_run)
+                t.start()
+
+            # reselect the first block
+            else:
+                # eliminate the first selection line
+                cv.delete(id_first_select_rect)
+                cv.delete(id_second_select_rect)
+
+                # set the reselected first block's coordinate
+                first_selected = False
+                cv.bind("<Button-1>", call_back)
+
+
+# make a time delay for 0.2 seconds
+timer_interval = 0.2
+
+
+def delay_run():
+    # eliminate blocks and connection lines
+    time.sleep(0.1)
+    clear_two_blocks()
+
+
+# eliminate blocks and connection lines
+def clear_two_blocks():
+    global map, cv, first_selected, p1, p2
+    # delay for one second
+    # time.sleep(1)
+    # delete the first selection line
+    cv.delete(id_first_select_rect)
+    # delete the second selection line
+    cv.delete(id_second_select_rect)
+    # remove the value of the block
+    map[p1.x][p1.y] = " "
+    cv.delete(image_map[p1.x][p1.y])
+    map[p2.x][p2.y] = " "
+    cv.delete(image_map[p2.x][p2.y])
+    first_selected = False
+    # eliminate the connection line
+    delete_connection_line()
+    winsound.PlaySound(f'./eliminate.wav', winsound.SND_ASYNC)
+    cv.bind("<Button-1>", call_back)
+
+
+'''
+The method for eliminating gem elements in the same row or column is based on the principle that if the number of spaces 
+between two identical elements is equal to their row/column difference minus one, then they can be eliminated by 
+connecting them. In this method, x represents the column and y represents the row. The function takes two arguments, 
+p1 and p2, which represent the coordinates of the two previously selected points, and determines whether they can be 
+eliminated based on the number of spaces between them.
+'''
+
+
+# simple straight connection
+def line_check(p1, p2):
+    global map, Width, Height
+    absolute_distance = 0
+    count_space = 0
+    # same row or same column
+    if p1.x == p2.x or p1.y == p2.y:
+
+        # under the situation of same column
+        if p1.x == p2.x and p1.y != p2.y:
+
+            # the absolute value in terms of the spaces in between
+            absolute_distance = abs(p1.y - p2.y) - 1
+            # positive or negative
+            if p1.y - p2.y > 0:
+                spaces_in_between = -1
+            else:
+                spaces_in_between = 1
+            for i in range(1, absolute_distance + 1):
+                if map[p1.x][p1.y + i * spaces_in_between] == " ":
+                    # space incremented by one
+                    count_space += 1
+                else:
+                    # break when there is blocks in between
+                    break;
+
+        # under the situation of same row
+        elif p1.y == p2.y and p1.x != p2.x:
+
+            absolute_distance = abs(p1.x - p2.x) - 1
+            # positive or negative
+            if p1.x - p2.x > 0:
+                spaces_in_between = -1
+            else:
+                spaces_in_between = 1
+            for i in range(1, absolute_distance + 1):
+                if map[p1.x + i * spaces_in_between][p1.y] == " ":
+                    # space incremented by one
+                    count_space += 1
+                else:
+                    # break when there is blocks in between
+                    break
+
+        if count_space == absolute_distance:
+            # connection built
+            return True
+        else:
+
+            return False
+    else:
+        # return false when they neither on the same row nor column
+        return False;
+
+
+# One vertical connection
+'''
+The right-angle connection method can be used to attempt a connection between two points with different X and Y 
+coordinates. The function takes in two parameters, the first being the coordinates of the first selected point, and 
+the second being the coordinates of the second selected point.
+'''
+
+
+def one_corner_connection(p1, p2):
+    global map, Width, Height, linePointStack
+    # Check the first potential corner point, assigning a same value for checking if it's empty
+    check_point_1 = Point(p1.x, p2.y)
+    # Check the second potential corner point, assigning a same value for checking if it's empty
+    check_point_2 = Point(p2.x, p1.y)
+
+    # Check the first corner point
+    if map[check_point_1.x][check_point_1.y] == " ":
+        if line_check(p1, check_point_1) and line_check(check_point_1, p2):
+            linePointStack.append(check_point_1)
+
+            return True
+
+    # Check the second corner point
+    if map[check_point_2.x][check_point_2.y] == " ":
+        if line_check(p1, check_point_2) and line_check(check_point_2, p2):
+            linePointStack.append(check_point_2)
+
+            return True
+
+    print("Cannot eliminate with corner connection")
+    return False
+
+
+# double vertical connection
+'''
+Look for an empty space called "checkP" in the four directions around point p1.
+Call OneCornerLink(checkP, p2).
+By iterating through the four directions around point p1 to find checkP, and then calling OneCornerLink(checkP, p2) to 
+determine if the connection is valid, the two points can be connected with a dual right-angle if the check is true. 
+If all the empty spaces have been traversed and no checkP is found that makes OneCornerLink(checkP, p2) true, then the 
+two points cannot be connected. The code for the dual right-angle connection method is also provided, with p1 and p2 
+being the first and second points, respectively.
+'''
+
+
+def two_corner_connection(p1, p2):
+    global map, Width, Height, linePointStack
+    check_point = Point(p1.x, p1.y)
+    # all direction test
+    for i in range(0, 4):
+        check_point.x = p1.x
+        check_point.y = p1.y
+        # go up
+        if i == 0:
+            check_point.y -= 1
+            while (check_point.y >= 0) and map[check_point.x][check_point.y] == " ":
+                linePointStack.append(check_point)
+                if one_corner_connection(check_point, p2):
+
+                    return True
+                else:
+                    linePointStack.pop()
+                check_point.y -= 1
+            # two vertical points are on the upper of the checkerboard
+            if check_point.y == -1:
+                # upper boundary point
+                z = Point(p2.x, 0)
+                # two vertical points are over the upper of the checkerboard
+                if line_check(z, p2):
+                    linePointStack.append(Point(p1.x, -1))
+                    linePointStack.append(Point(p2.x, -1))
+
+                    return True
+
+        # go left
+        elif i == 1:
+            check_point.x -= 1
+            while (check_point.x >= 0) and map[check_point.x][check_point.y] == " ":
+                linePointStack.append(check_point)
+                if one_corner_connection(check_point, p2):
+
+                    return True
+                else:
+                    linePointStack.pop()
+                check_point.x -= 1
+            # check if the two points are on the left boundary outside the game area
+            if check_point.x < 0:
+                z = Point(0, p2.y)  # left boundary point
+                if line_check(z, p2):  # the two points are on the left of the checkerboard, outside the game area
+                    linePointStack.append(Point(-1, p1.y))
+                    linePointStack.append(Point(-1, p2.y))
+
+                    return True
+
+        # go right
+        elif i == 2:
+            check_point.x += 1
+            while (check_point.x < Width) and map[check_point.x][check_point.y] == " ":
+                linePointStack.append(check_point)
+                if one_corner_connection(check_point, p2):
+
+                    return True
+                else:
+                    linePointStack.pop()
+                check_point.x += 1
+            # check if the two points are on the right boundary outside the game area
+            if check_point.x == Width:
+                z = Point(Width - 1, p2.y)  # right boundary point
+                if line_check(z, p2):  # the two points are on the right of the checkerboard, outside the game area
+                    linePointStack.append(Point(Width, p1.y))
+                    linePointStack.append(Point(Width, p2.y))
+
+                    return True
+
+        # go down
+        elif i == 3:
+            check_point.y += 1
+            while (check_point.y < Height) and map[check_point.x][check_point.y] == " ":
+                linePointStack.append(check_point)
+                if one_corner_connection(check_point, p2):
+
+                    return True
+                else:
+                    linePointStack.pop()
+                check_point.y += 1
+            # check if the two points are on the bottom boundary outside the game area
+            if check_point.y == Height:
+                z = Point(p2.x, Height - 1)  # bottom boundary point
+                if line_check(z, p2):  # the two points are on the bottom of the checkerboard, outside the game area
+                    linePointStack.append(Point(p1.x, Height))
+                    linePointStack.append(Point(p2.x, Height))
+
+                    return True
+
+    # no available check points for all four directions
+    return False;
+
+
+linePointStack = False
+Line_id = None
+
+
+# draw connection line
+def draw_connection_line(p1, p2):
+    global linePointStack, Line_id
+    # check if there are any previous line points on the stack. If there are none, it adds the line between p1 and p2 to
+    # the Line_id list
+    if len(linePointStack) == 0:
+        Line_id.append(draw_line(p1, p2))
+    else:
+        pass
+
+    # If there is one line point on the stack, the function pops it off and adds lines between p1 and the popped point,
+    # and between p2 and the popped point
+    if len(linePointStack) == 1:
+        stack = linePointStack.pop()
+
+        Line_id.append(draw_line(p1, stack))
+        Line_id.append(draw_line(p2, stack))
+
+    # If there are two line points on the stack, the function pops them off and adds lines between p2 and the first
+    # popped point, between the two popped points, and between p1 and the second popped point.
+    if len(linePointStack) == 2:
+        stack1 = linePointStack.pop()
+
+        Line_id.append(draw_line(p2, stack1))
+        stack2 = linePointStack.pop()
+
+        Line_id.append(draw_line(stack1, stack2))
+        Line_id.append(draw_line(p1, stack2))
+
+
+# delete connection line
+def delete_connection_line():
+    global cv, Line_id
+    while len(Line_id) > 0:
+        pop_id = Line_id.pop()
+        cv.delete(pop_id)
+
+
+def draw_line(p1, p2):
+    global cv
+    line_id = cv.create_line(p1.x * 40 + 20, p1.y * 40 + 20, p2.x * 40 + 20, p2.y * 40 + 20, width=6, fill='yellow')
+    cv.pack()
+    return line_id
+
+
+# generate_map
+def generate_map():
+    global map, Width, Height
+    # generate a random map
+    temp_map = []
+    m = Width * Height // 10
+    for x in range(m):
+        for i in range(10):
+            temp_map.append(x)
+    random.shuffle(temp_map)
+    for x in range(Width):
+        for y in range(Height):
+            map[x][y] = temp_map[x * Height + y]
+
+
+# give a hint
+def hint(event):
+    global id_first_select_rect, id_second_select_rect, cv
+    row_hint = Height
+    column_hint = Width
+    blocks_found = False;
+    # start from (0,0)
+    for i in range(0, row_hint * column_hint):
+        # found the block and break the loop
+        if blocks_found:
+            break
+
+        # calculate the corresponding position
+        x1 = i % column_hint
+        y1 = i // column_hint
+        p1 = Point(x1, y1)
+        # skip the empty spot
+        if map[x1][y1] == ' ':
+            continue
+        # start from the second block
+        for j in range(i + 1, row_hint * column_hint):
+            # figure out the column position
+            x2 = j % column_hint
+            y2 = j // column_hint
+            p2 = Point(x2, y2)
+            # second block is not empty and they are same blocks
+            if map[x2][y2] != ' ' and is_same(p1, p2):
+                # whether the link is reasonable
+                if is_link(p1, p2):
+                    blocks_found = True
+                    break
+
+    # point 1（x1,y1 and point 2（x2,y2）connect
+    if blocks_found:
+        # draw the first selection line
+        id_first_select_rect = cv.create_rectangle(x1 * 40, y1 * 40, x1 * 40 + 40, y1 * 40 + 40, width=4, outline="green")
+        # draw the second selection line
+        id_second_select_rect = cv.create_rectangle(x2 * 40, y2 * 40, x2 * 40 + 40, y2 * 40 + 40, width=4, outline="green")
+        t = Timer(timer_interval, delay_run)
+        t.start()
+
+    return blocks_found
+
+
+def game_menu():
+    global window
+
+    def on_play():
+        nonlocal result
+        global map, Width, Height, images, cv, window, image_map, first_selected, linePointStack, Line_id
+        window.destroy()
+        result = True
+        root = Tk()
+        root.title("Gem Match&Eliminate Game")
+        images = [PhotoImage(file=f'images{i}.png') for i in range(10)]
+        first_selected = False
+
+        clearFlag = False
+        linePointStack = []
+        Line_id = []
+        Height = 10
+        Width = 10
+        map = [[" " for y in range(Height)] for x in range(Width)]
+        image_map = [[" " for y in range(Height)] for x in range(Width)]
+        cv = Canvas(root, bg='black', width=400, height=400)
+
+        cv.bind("<Button-1>", call_back)
+        cv.bind("<Button-3>", hint)
+        cv.pack()
+
+        # Center the canvas by setting its x and y coordinates using the place method
+        window_width = root.winfo_reqwidth()
+        window_height = root.winfo_reqheight()
+        canvas_width = cv.winfo_reqwidth()
+        canvas_height = cv.winfo_reqheight()
+        x = (window_width - canvas_width) // 2
+        y = (window_height - canvas_height) // 2
+        cv.place(x=x, y=y)
+
+        generate_map()
+        print_map()
+        root.mainloop()
+
+    def on_quit():
+        nonlocal result
+        result = False
+        window.destroy()
+
+    result = None
+
+    window = tk.Tk()
+    window.title("Game Menu")
+    window.geometry("400x400")
+    window.configure(bg='#333')
+
+    play_button = tk.Button(window, text="Play", command=on_play, bg='#39ac73', fg='white', font=('Arial', 20))
+    play_button.pack(pady=50, padx=20, fill=tk.BOTH, expand=True)
+
+    quit_button = tk.Button(window, text="Quit", command=on_quit, bg='#dc3545', fg='white', font=('Arial', 20))
+    quit_button.pack(pady=50, padx=20, fill=tk.BOTH, expand=True)
+
+    window.protocol("WM_DELETE_WINDOW", on_quit)
+
+    window.mainloop()
+
+    return result
+    
+    
+game_menu()
+    
+    
