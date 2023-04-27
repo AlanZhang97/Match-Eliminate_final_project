@@ -1,5 +1,5 @@
 # Match-Eliminate_final_project
-<span style="color:red">This text is red</span>
+
 Introduction:
 
 This code implements a game that involves matching blocks of the same kind gem. It features a GUI built using the tkinter library ands implements a puzzle game where the objective is to connect two given points on a board by drawing straight lines. The board is represented as a two-dimensional array, where the cells can be either empty or blocked. The solution is found by building a path between the two points that only goes through empty cells.
