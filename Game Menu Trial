@@ -1,0 +1,29 @@
+def game_menu():
+    def on_play():
+        nonlocal result
+        result = True
+        window.destroy()
+
+    def on_quit():
+        nonlocal result
+        result = False
+        window.destroy()
+
+    result = None
+
+    window = tk.Tk()
+    window.title("Game Menu")
+    window.geometry("400x400")
+    window.configure(bg='#333')
+
+    play_button = tk.Button(window, text="Play", command=on_play, bg='#39ac73', fg='white', font=('Arial', 20))
+    play_button.pack(pady=50, padx=20, fill=tk.BOTH, expand=True)
+
+    quit_button = tk.Button(window, text="Quit", command=on_quit, bg='#dc3545', fg='white', font=('Arial', 20))
+    quit_button.pack(pady=50, padx=20, fill=tk.BOTH, expand=True)
+
+    window.protocol("WM_DELETE_WINDOW", on_quit)
+
+    window.mainloop()
+
+    return result
