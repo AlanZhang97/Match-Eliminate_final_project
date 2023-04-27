@@ -1,0 +1,33 @@
+root = Tk()
+root.title("Gem Match&Eliminate Game")
+imgs = [PhotoImage(file=f'./images{i}.png') for i in range(10)]
+Select_first = False
+# whether the first block is selected
+firstSelectRectId = -1
+# whether the second block is selected
+SecondSelectRectId = -1
+clearFlag = False
+linePointStack = []
+Line_id = []
+Height = 10
+Width = 10
+map = [[" " for y in range(Height)] for x in range(Width)]
+image_map = [[" " for y in range(Height)] for x in range(Width)]
+cv = Canvas(root, bg='black', width=400, height=400)
+
+cv.bind("<Button-c>", call_back)
+cv.bind("<Button-h>", hint)
+cv.pack()
+
+# Center the canvas by setting its x and y coordinates using the place method
+window_width = root.winfo_reqwidth()
+window_height = root.winfo_reqheight()
+canvas_width = cv.winfo_reqwidth()
+canvas_height = cv.winfo_reqheight()
+x = (window_width - canvas_width) // 2
+y = (window_height - canvas_height) // 2
+cv.place(x=x, y=y)
+
+generate_map()
+print_map()
+root.mainloop()
